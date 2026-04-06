@@ -17,14 +17,12 @@ func _ready() -> void:
 		if await user_login(file_data.username, file_data.user_token):
 			data_user = file_data
 
-func check_internet() -> bool:
-	return str(await time_server()) != "error"
-
+#region Data Functions
 func data_fetch(require_user: bool, key: String) -> Variant:
 	var code: String = "&key=" + key
 	return await connect_api("data_store", require_user, DATA_STORE, code)
 
-func data_get_keys(require_user: bool, pattern:= "") -> Variant:
+func data_get_keys(require_user: bool, pattern: String = "") -> Variant:
 	var code: String = ""
 	if pattern != "":
 		code = "&pattern=" + pattern
@@ -41,10 +39,9 @@ func data_set(require_user: bool, key: String, data: String) -> Variant:
 func data_update(require_user: bool, key: String, operation: String, value: String) -> Variant:
 	var code: String = "&key=" + key + "&operation=" + operation + "&value=" + value
 	return await connect_api("data_store/update",require_user, DATA_STORE, code)
+#endregion
 
-func friends_list() -> Variant:
-	return await connect_api("friends", true, FRIENDS)
-
+#region Sessions Functions
 func sessions_check() -> Variant:
 	return await connect_api("sessions/check", true, SESSIONS)
 
@@ -59,7 +56,9 @@ func sessions_ping(status: String = "") -> Variant:
 	if status != "":
 		code = "&status=" + status
 	return await connect_api("sessions/ping", true, SESSIONS, code)
+#endregion
 
+#region Scores Functions
 func scores_add(require_user: bool, score: String, sort: int, table_id: int = 0, guest: String = "", extra_data: String = "") -> Variant:
 	var code: String = "&score=" + score + "&sort=" + str(sort)
 	if table_id != 0:
@@ -92,10 +91,9 @@ func scores_get_rank(sort:int, table_id: int = 0) -> Variant:
 
 func scores_table() -> Variant:
 	return await connect_api("scores/tables", false, SCORES)
+#endregion
 
-func time_server() -> Variant:
-	return await connect_api("time", false, TIME)
-
+#region Trophies Functions
 func trophy_achieved(achieved: bool) -> Variant:
 	var code: String = ""
 	code = "&achieved=" + str(achieved)
@@ -114,6 +112,11 @@ func trophies_info(trophy_id: int = 0) -> Variant:
 func trophy_remove(trophy_id: int) -> Variant:
 	var code: String = "&trophy_id=" + str(trophy_id)
 	return await connect_api("trophies/remove-achieved", true, TROPHY, code)
+#endregion
+
+#region User Functions
+func friends_list() -> Variant:
+	return await connect_api("friends", true, FRIENDS)
 
 func user_auth(username: String, user_token: String) -> Variant:
 	var code: String = "&username=" + username + "&user_token=" + user_token
@@ -137,27 +140,36 @@ func user_login(username: String, user_token: String) -> bool:
 		return true
 	else:
 		return false
+#endregion
 
+#region Others Functions
+func check_internet() -> bool:
+	return str(await time_server()) != "error"
+
+func time_server() -> Variant:
+	return await connect_api("time", false, TIME)
+#endregion
+
+#region Connections Functions
 func connect_api(type: String, require_user: bool, action_type, code: String = "") -> Variant:
-	if FileAccess.file_exists(SaveCFG.file_cfg):
-		if SaveCFG.sys_data["gj"]["game_id"] == "" or SaveCFG.sys_data["gj"]["private_key"] == "":
-			printerr("To use the Game Jolt API it is necessary to inform the Game ID and Private Key of your Game Jolt project page in Project Settings > Additional APIs > Game Jolt.")
-			return null
-		else:
-			var LINK: String = "https://api.gamejolt.com/api/game/v1_2/" + type + "/?game_id=" + SaveCFG.sys_data["gj"]["game_id"]
-			if require_user:
-				if data_user["username"] != "" and data_user["user_token"] != "" and FileAccess.file_exists(user_file):
-					LINK += "&username=" + data_user["username"] + "&user_token=" + data_user["user_token"]
-				else:
-					printerr("Username and User Token is required for this function!")
-					return null
-			LINK += code
-			var LINK_WITH_KEY: String = LINK + SaveCFG.sys_data["gj"]["private_key"]
-			var LINK_COMPLETE: String = LINK + "&signature=" + LINK_WITH_KEY.sha1_text()
-			return await connect_web(LINK_COMPLETE, action_type)
-	else:
-		printerr("To use the Game Jolt API it is necessary to inform the Game ID and Private Key of your Game Jolt project page in Project Settings > Additional APIs > Game Jolt.")
+	var game_id: String = str(ProjectSettings.get_setting("application/game_jolt_api/game_id"))
+	var private_key: String = ProjectSettings.get_setting("application/game_jolt_api/private_key")
+	
+	if game_id == "" or private_key == "":
+		printerr("To use the Game Jolt API it is necessary to inform the Game ID and Private Key of your Game Jolt project page in Project Settings > General > Application > Game Jolt API.")
 		return null
+	else:
+		var LINK: String = "https://api.gamejolt.com/api/game/v1_2/" + type + "/?game_id=" + game_id
+		if require_user:
+			if data_user["username"] != "" and data_user["user_token"] != "" and FileAccess.file_exists(user_file):
+				LINK += "&username=" + data_user["username"] + "&user_token=" + data_user["user_token"]
+			else:
+				printerr("Username and User Token is required for this function!")
+				return null
+		LINK += code
+		var LINK_WITH_KEY: String = LINK + private_key
+		var LINK_COMPLETE: String = LINK + "&signature=" + LINK_WITH_KEY.sha1_text()
+		return await connect_web(LINK_COMPLETE, action_type)
 
 func connect_web(LINK: String, action_type) -> Variant:
 	var https_request: HTTPRequest = HTTPRequest.new()
@@ -218,3 +230,4 @@ func data_processing(data: Array, action_type) -> Variant:
 	else:
 		printerr("Connection error",", code: " + str(data[0]))
 		return "error"
+#endregion
