@@ -1,14 +1,16 @@
 @icon("res://addons/game-jolt-api/gamejolt.png")
 extends Node
 
+enum {USER, DATA_STORE, TROPHY, SESSIONS, TIME, SCORES, FRIENDS, OTHER, IMG}
+enum OPERATION {ADD, SUBTRACT, MULTIPLY, DIVIDE, APPEND, PREPEND}
+
+var user_file: String = "user://gj-credentials.dat"
+
 var data_user: Dictionary = {
 	"username":"",
 	"user_token":"",
 	"user_id" : 0
 }
-
-var user_file: String = "user://gj-credentials.dat"
-enum {USER, DATA_STORE, TROPHY, SESSIONS, TIME, SCORES, FRIENDS, OTHER, IMG}
 
 func _ready() -> void:
 	if FileAccess.file_exists(user_file):
@@ -16,6 +18,10 @@ func _ready() -> void:
 		var file_data: Dictionary = file.get_var()
 		if await user_login(file_data.username, file_data.user_token):
 			data_user = file_data
+
+func _process(_delta: float) -> void:
+	
+	pass
 
 #region Data Functions
 func data_fetch(require_user: bool, key: String) -> Variant:
@@ -31,13 +37,14 @@ func data_get_keys(require_user: bool, pattern: String = "") -> Variant:
 func data_remove(require_user: bool,key: String) -> Variant:
 	var code: String = "&key=" + key
 	return await connect_api("data_store/remove", require_user, DATA_STORE,code)
-	
+
 func data_set(require_user: bool, key: String, data: String) -> Variant:
 	var code: String = "&key=" + key + "&data=" + data
 	return await connect_api("data_store/set", require_user, DATA_STORE, code)
 
-func data_update(require_user: bool, key: String, operation: String, value: String) -> Variant:
-	var code: String = "&key=" + key + "&operation=" + operation + "&value=" + value
+func data_update(require_user: bool, key: String, operation: OPERATION, value: String) -> Variant:
+	var operation_str: Array[String] = ["add", "subtract", "multiply", "divide", "append", "prepend"]
+	var code: String = "&key=" + key + "&operation=" + operation_str[operation] + "&value=" + value
 	return await connect_api("data_store/update",require_user, DATA_STORE, code)
 #endregion
 
@@ -48,7 +55,12 @@ func sessions_check() -> Variant:
 func sessions_close() -> Variant:
 	return await connect_api("sessions/close", true, SESSIONS)
 
-func sessions_open() -> Variant:
+func sessions_open(ping: bool = true) -> Variant:
+	var timer: Timer = Timer.new()
+	add_child(timer)
+	timer.wait_time = 30.0
+	timer.start()
+	timer.timeout.connect(sessions_ping.bind("active"))
 	return await connect_api("sessions/open", true, SESSIONS)
 
 func sessions_ping(status: String = "") -> Variant:
