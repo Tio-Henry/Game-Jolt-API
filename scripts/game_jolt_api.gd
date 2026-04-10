@@ -3,6 +3,7 @@ extends Node
 
 enum {USER, DATA_STORE, TROPHY, SESSIONS, TIME, SCORES, FRIENDS, OTHER, IMG}
 enum OPERATION {ADD, SUBTRACT, MULTIPLY, DIVIDE, APPEND, PREPEND}
+enum STATUS {ACTIVE, IDLE, NULL}
 
 var user_file: String = "user://gj-credentials.dat"
 
@@ -18,10 +19,6 @@ func _ready() -> void:
 		var file_data: Dictionary = file.get_var()
 		if await user_login(file_data.username, file_data.user_token):
 			data_user = file_data
-
-func _process(_delta: float) -> void:
-	
-	pass
 
 #region Data Functions
 func data_fetch(require_user: bool, key: String) -> Variant:
@@ -52,21 +49,34 @@ func data_update(require_user: bool, key: String, operation: OPERATION, value: S
 func sessions_check() -> Variant:
 	return await connect_api("sessions/check", true, SESSIONS)
 
-func sessions_close() -> Variant:
+func sessions_close(timer: Variant) -> Variant:
+	if is_instance_valid(timer):
+		if timer is Timer:
+			timer.queue_free()
+	else:
+		return null
 	return await connect_api("sessions/close", true, SESSIONS)
 
 func sessions_open(ping: bool = true) -> Variant:
-	var timer: Timer = Timer.new()
-	add_child(timer)
-	timer.wait_time = 30.0
-	timer.start()
-	timer.timeout.connect(sessions_ping.bind("active"))
-	return await connect_api("sessions/open", true, SESSIONS)
+	var response: Variant = await connect_api("sessions/open", true, SESSIONS)
+	if ping:
+		if response:
+			var timer: Timer = Timer.new()
+			add_child(timer)
+			timer.wait_time = 30.0
+			timer.start()
+			timer.timeout.connect(sessions_ping.bind(STATUS.ACTIVE))
+			return [response, timer]
+		else:
+			return response
+	else:
+		return response
 
-func sessions_ping(status: String = "") -> Variant:
+func sessions_ping(status: STATUS = STATUS.ACTIVE) -> Variant:
+	var status_str: Array[String] = ["active","idle",""]
 	var code: String = ""
-	if status != "":
-		code = "&status=" + status
+	if status_str[status] != "":
+		code = "&status=" + status_str[status]
 	return await connect_api("sessions/ping", true, SESSIONS, code)
 #endregion
 
