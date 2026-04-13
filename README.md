@@ -1,6 +1,6 @@
 # 🎮 Game Jolt API for Godot
 
-This plugin is based on the [Game Jolt API Docs](https://gamejolt.com/game-api). It is highly recommended to read both the **Plugin Wiki** and the official **Game Jolt API Docs** for detailed information.
+This plugin is based on the [Game Jolt API Docs](https://gamejolt.com/game-api). It is highly recommended to read both the **[Plugin Wiki](https://github.com/Tio-Henry/Game-Jolt-API/wiki)** and the official **Game Jolt API Docs** for detailed information.
 
 ### 🚀 Key Features
 * **Full Implementation:** All API functions are currently implemented.
