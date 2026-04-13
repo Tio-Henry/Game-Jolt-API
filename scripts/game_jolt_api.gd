@@ -202,7 +202,7 @@ func connect_web(LINK: String, action_type: ACTION_TYPE) -> Variant:
 	return data_processing(data, action_type)
 
 func data_processing(data: Array, action_type: ACTION_TYPE) -> Variant:
-	if data[0] == 0:
+	if data[0] == 0 and data[1] == 200:
 		var json_data: Variant = JSON.parse_string(data[3].get_string_from_utf8())
 		var response: Dictionary = json_data["response"]
 		if response["success"] == "true":
@@ -250,6 +250,6 @@ func data_processing(data: Array, action_type: ACTION_TYPE) -> Variant:
 				printerr(response.message)
 			return response.success == "true"
 	else:
-		printerr("Connection error",", code: " + str(data[0]))
+		printerr("Connection error",str(" | Result: ",data[0], ", Response_code: ", data[1]))
 		return "error"
 #endregion
